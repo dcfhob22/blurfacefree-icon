@@ -76,7 +76,7 @@ def find_deface():
         candidate = SCRIPTS_DIR / "deface.exe"
         if candidate.exists():
             return [str(candidate)]
-    return [sys.executable, "-m", "deface"]
+    return [sys.executable, "-m", "deface.deface"]
 
 
 def open_path(p: Path):
@@ -169,6 +169,7 @@ class App:
         self.worker: threading.Thread | None = None
         self.stop_flag = threading.Event()
         self.current_proc: subprocess.Popen | None = None
+        self.cover_image = StringVar(value="")
 
         self._build_ui()
         self.root.after(80, self._drain_log)
@@ -236,7 +237,8 @@ class App:
         modes.pack(fill="x", padx=12, pady=(0, 8))
         tk.Label(modes, text="mode:", bg=CARD, fg=DIM, font=F_BODY).pack(side="left", padx=(4, 8))
         for v, label in (("blur", "🫧 blur"), ("mosaic", "🟪 mosaic"),
-                         ("solid", "⬛ solid"), ("none", "👀 detect")):
+                 ("solid", "⬛ solid"), ("img", "🖼 image"),
+                 ("none", "👀 detect")):
             rb = tk.Radiobutton(
                 modes, text=label, variable=self.mode, value=v,
                 indicatoron=False, bd=0, padx=14, pady=7,
@@ -288,6 +290,17 @@ class App:
                  highlightthickness=1, highlightbackground=BORDER,
                  highlightcolor=ACCENT).pack(side="left", padx=8)
 
+        # Image Block
+        imgrow = tk.Frame(opts, bg=CARD)
+        imgrow.pack(fill="x", padx=14, pady=(6, 4))
+        tk.Label(imgrow, text="cover image:", bg=CARD, fg=DIM, font=F_BODY).pack(side="left")
+        tk.Entry(imgrow, textvariable=self.cover_image,
+                bg=CARD_HI, fg=TEXT, insertbackground=TEXT,
+                relief="flat", font=F_BODY,
+                highlightthickness=1, highlightbackground=BORDER,
+                highlightcolor=ACCENT).pack(side="left", fill="x", expand=True, padx=8)
+        make_btn(imgrow, "browse", self._pick_cover_image, kind="ghost").pack(side="left")
+
         outrow = tk.Frame(opts, bg=CARD)
         outrow.pack(fill="x", padx=14, pady=(6, 14))
         tk.Label(outrow, text="output folder:", bg=CARD, fg=DIM,
@@ -298,6 +311,8 @@ class App:
                  highlightthickness=1, highlightbackground=BORDER,
                  highlightcolor=ACCENT).pack(side="left", fill="x", expand=True, padx=8)
         make_btn(outrow, "browse", self._pick_outdir, kind="ghost").pack(side="left")
+
+        
 
         # ── action bar ──
         action = tk.Frame(root, bg=BG)
@@ -351,6 +366,15 @@ class App:
         if d:
             self.output_dir.set(d)
 
+    def _pick_cover_image(self):
+        p = filedialog.askopenfilename(
+            title="pick an image to cover faces",
+            filetypes=[("images", "*.png *.jpg *.jpeg *.bmp *.webp"), ("all files", "*.*")],
+        )
+        if p:
+            self.cover_image.set(p)
+            self.mode.set("img")
+
     def _open_outdir(self):
         d = Path(self.output_dir.get())
         d.mkdir(parents=True, exist_ok=True)
@@ -397,6 +421,9 @@ class App:
         if not self.files:
             messagebox.showinfo("nothing here", "add at least one video first ✨")
             return
+        if self.mode.get() == "img" and not Path(self.cover_image.get()).is_file():
+            messagebox.showinfo("no image", "pick a cover image first 🖼")
+            return
         outdir = Path(self.output_dir.get())
         outdir.mkdir(parents=True, exist_ok=True)
         self.stop_flag.clear()
@@ -440,6 +467,8 @@ class App:
                     args += ["--mosaicsize", self.mosaic_size.get()]
                 except ValueError:
                     pass
+            if self.mode.get() == "img":
+                args += ["--replaceimg", self.cover_image.get()]
             args.append(str(f))
 
             self.root.after(0, lambda i=i, total=total, name=f.name:
