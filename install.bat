@@ -20,24 +20,40 @@ if errorlevel 1 (
 )
 
 echo.
-echo === Step 1/2: Upgrading pip ===
+echo === Step 1/3: Upgrading pip ===
 python -m pip install --upgrade pip
 if errorlevel 1 goto fail
 
 echo.
-echo === Step 2/2: Installing face-blur engine + GUI dependencies ===
+echo === Step 2/3: Installing face-blur engine + GUI dependencies ===
 python -m pip install -r "%~dp0requirements.txt"
 if errorlevel 1 goto fail
 
 echo.
+echo === Step 3/3: Downloading face models (one time, ~40 MB) ===
+python "%~dp0install_models.py"
+if errorlevel 1 goto fail_models
+
+echo.
 echo ===========================================================
-echo  Install complete!
+echo  Install complete! Everything is downloaded.
+echo  After this, the app works fully offline.
 echo.
 echo  Next step:  double-click  "Blur Faces.bat"  to open the app.
 echo ===========================================================
 echo.
 pause
 exit /b 0
+
+:fail_models
+echo.
+echo [!] The program was installed, but the face models could not be downloaded.
+echo     "pick from preview" will not work until they are. Either:
+echo       - Connect to the internet and run this installer again, or
+echo       - Download the files by hand using the links printed above.
+echo.
+pause
+exit /b 1
 
 :fail
 echo.

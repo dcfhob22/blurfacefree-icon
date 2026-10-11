@@ -1,6 +1,10 @@
 deface>=1.5.0
 tkinterdnd2>=0.4.3
 onnx>=1.16.0
+numpy
+opencv-python
+pillow
+imageio-ffmpeg
 
 # GPU / Neural Engine acceleration — chosen per OS automatically by pip
 onnxruntime-directml>=1.17.0; platform_system == "Windows"
